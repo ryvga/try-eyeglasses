@@ -4,6 +4,7 @@ import { mkdirSync } from "fs";
 import { basename, join } from "path";
 import { env } from "@/lib/config";
 import * as schema from "@/db/schema";
+import { bootstrapSql } from "@/db/bootstrap";
 
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 let sqlite: Database.Database | null = null;
@@ -25,6 +26,7 @@ export function getDb() {
     sqlite = new Database(path);
     sqlite.pragma("journal_mode = WAL");
     sqlite.pragma("foreign_keys = ON");
+    sqlite.exec(bootstrapSql);
     db = drizzle(sqlite, { schema });
   }
 
