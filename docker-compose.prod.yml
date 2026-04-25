@@ -1,0 +1,6 @@
+services:
+  web:
+    env_file:
+      - /etc/tryeyeglasses/app.env
+    ports:
+      - "80:3000"
