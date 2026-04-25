@@ -486,8 +486,10 @@ export function TryOnStudio() {
                         alt="After generation placeholder"
                         className="size-full object-cover opacity-45 grayscale"
                       />
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/25">
-                        <FrameIllustration style={selectedStyle} compact={false} floating />
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/40 p-6 text-center backdrop-blur-[1px]">
+                        <p className="max-w-[14rem] font-mono text-[12px] uppercase tracking-[0.72px] text-foreground">
+                          Generate to preview the selected frame on your photo
+                        </p>
                       </div>
                       <span className="absolute right-3 top-3 rounded border border-foreground/20 bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-[0.66px]">
                         After
@@ -683,18 +685,16 @@ function Feature({
 function FrameIllustration({
   style,
   compact = false,
-  floating = false,
   index = 0,
 }: {
   style: GlassesStyle;
   compact?: boolean;
-  floating?: boolean;
   index?: number;
 }) {
   const colors = ["#18181b", "#7c2d12", "#8b8b83", "#b98943", "#1f3a4a", "#6b6f45"];
   const stroke = colors[index % colors.length];
-  const width = compact ? 58 : floating ? 158 : 170;
-  const height = compact ? 32 : floating ? 76 : 74;
+  const width = compact ? 58 : 170;
+  const height = compact ? 32 : 74;
 
   return (
     <svg
@@ -703,10 +703,7 @@ function FrameIllustration({
       viewBox="0 0 170 74"
       role="img"
       aria-label={`${style.name} frame preview`}
-      className={cn(
-        "mx-auto block text-foreground transition group-hover:scale-[1.02]",
-        floating && "drop-shadow-sm",
-      )}
+      className="mx-auto block text-foreground transition group-hover:scale-[1.02]"
     >
       <path
         d="M17 36 C22 20 48 17 63 29 C70 36 68 55 58 61 C45 69 23 62 18 47 Z"

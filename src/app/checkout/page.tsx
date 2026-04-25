@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { CreditCheckout } from "@/components/credit-checkout";
 
 export const metadata: Metadata = {
@@ -10,5 +11,9 @@ export const metadata: Metadata = {
 };
 
 export default function CheckoutPage() {
-  return <CreditCheckout />;
+  return (
+    <Suspense fallback={null}>
+      <CreditCheckout />
+    </Suspense>
+  );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CreditCardIcon, LoaderCircleIcon } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2Icon, CreditCardIcon, LoaderCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +15,48 @@ import {
 import { CREDIT_PACKS } from "@/lib/payments/paypal";
 
 export function CreditCheckout() {
+  const searchParams = useSearchParams();
   const [selectedPackId, setSelectedPackId] = useState(CREDIT_PACKS[0].id);
+  const [captureStatus, setCaptureStatus] = useState<"idle" | "capturing" | "captured">("idle");
   const [isPending, startTransition] = useTransition();
+  const capturedTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+    const cancelled = searchParams.get("cancelled");
+
+    if (cancelled) {
+      toast.info("PayPal checkout was cancelled.");
+      return;
+    }
+
+    if (!token || capturedTokenRef.current === token) {
+      return;
+    }
+
+    capturedTokenRef.current = token;
+    setCaptureStatus("capturing");
+
+    async function captureApprovedOrder(orderId: string) {
+      const response = await fetch("/api/paypal/capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        setCaptureStatus("idle");
+        toast.error(payload.message ?? "Could not capture PayPal order.");
+        return;
+      }
+
+      setCaptureStatus("captured");
+      toast.success("Credits unlocked.");
+    }
+
+    void captureApprovedOrder(token);
+  }, [searchParams]);
 
   function createOrder() {
     startTransition(async () => {
@@ -31,19 +72,12 @@ export function CreditCheckout() {
         return;
       }
 
-      const captureResponse = await fetch("/api/paypal/capture", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id }),
-      });
-      const capture = await captureResponse.json();
-
-      if (!captureResponse.ok) {
-        toast.error(capture.message ?? "Could not capture PayPal order.");
+      if (!order.approveUrl) {
+        toast.error("PayPal did not return an approval link.");
         return;
       }
 
-      toast.success("Credits unlocked. PayPal JS buttons can replace this demo flow in production.");
+      window.location.assign(order.approveUrl);
     });
   }
 
@@ -57,7 +91,7 @@ export function CreditCheckout() {
           Add credits for more try-ons.
         </h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-          The server already creates and captures PayPal orders. Production can mount the PayPal JavaScript button with the same endpoints.
+          Choose a pack, approve in PayPal sandbox, then return here so we can unlock credits.
         </p>
       </div>
 
@@ -88,14 +122,20 @@ export function CreditCheckout() {
       <Button
         className="paper-button h-12 w-fit bg-foreground text-background hover:bg-foreground/90"
         onClick={createOrder}
-        disabled={isPending}
+        disabled={isPending || captureStatus === "capturing"}
       >
-        {isPending ? (
+        {isPending || captureStatus === "capturing" ? (
           <LoaderCircleIcon data-icon="inline-start" className="animate-spin" />
+        ) : captureStatus === "captured" ? (
+          <CheckCircle2Icon data-icon="inline-start" />
         ) : (
           <CreditCardIcon data-icon="inline-start" />
         )}
-        Continue with PayPal
+        {captureStatus === "capturing"
+          ? "Finalizing PayPal"
+          : captureStatus === "captured"
+            ? "Credits unlocked"
+            : "Continue with PayPal"}
       </Button>
     </main>
   );

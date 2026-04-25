@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { capturePayPalOrder } from "@/lib/payments/paypal";
+import { capturePayPalOrder, PayPalError } from "@/lib/payments/paypal";
 
 export const runtime = "nodejs";
 
@@ -13,11 +13,31 @@ export async function POST(request: Request) {
     );
   }
 
-  const capture = await capturePayPalOrder(body.orderId);
+  try {
+    const capture = await capturePayPalOrder(body.orderId);
 
-  return NextResponse.json({
-    status: "captured",
-    capture,
-    message: "Credits unlocked.",
-  });
+    return NextResponse.json({
+      status: "captured",
+      capture,
+      message: "Credits unlocked.",
+    });
+  } catch (error) {
+    if (error instanceof PayPalError) {
+      console.error("PayPal capture failed", {
+        status: error.status,
+        details: error.details,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        error: "PAYPAL_CAPTURE_FAILED",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Could not capture PayPal order.",
+      },
+      { status: 502 },
+    );
+  }
 }

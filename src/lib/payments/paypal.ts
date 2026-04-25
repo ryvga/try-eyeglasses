@@ -1,4 +1,5 @@
 import { env, requireEnv } from "@/lib/config";
+import { CANONICAL_ORIGIN } from "@/lib/seo";
 
 const PAYPAL_ORIGINS = {
   sandbox: "https://api-m.sandbox.paypal.com",
@@ -11,6 +12,31 @@ export type CreditPack = {
   credits: number;
   amountCents: number;
 };
+
+type PayPalLink = {
+  href: string;
+  rel: string;
+  method?: string;
+};
+
+type PayPalOrder = {
+  id: string;
+  status: string;
+  links?: PayPalLink[];
+  approveUrl?: string;
+  demo?: boolean;
+};
+
+export class PayPalError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly details?: string,
+  ) {
+    super(message);
+    this.name = "PayPalError";
+  }
+}
 
 export const CREDIT_PACKS: CreditPack[] = [
   { id: "starter", label: "Starter", credits: 5, amountCents: 500 },
@@ -49,6 +75,7 @@ export async function createPayPalOrder(pack: CreditPack) {
     return {
       id: `demo-order-${pack.id}`,
       status: "CREATED",
+      approveUrl: `/checkout?token=demo-order-${pack.id}`,
       demo: true,
     };
   }
@@ -63,6 +90,17 @@ export async function createPayPalOrder(pack: CreditPack) {
     },
     body: JSON.stringify({
       intent: "CAPTURE",
+      payment_source: {
+        paypal: {
+          experience_context: {
+            brand_name: "TryEyeglasses",
+            landing_page: "LOGIN",
+            user_action: "PAY_NOW",
+            return_url: `${CANONICAL_ORIGIN}/checkout`,
+            cancel_url: `${CANONICAL_ORIGIN}/checkout?cancelled=1`,
+          },
+        },
+      },
       purchase_units: [
         {
           description: `${pack.credits} TryEyeglasses credits`,
@@ -76,10 +114,19 @@ export async function createPayPalOrder(pack: CreditPack) {
   });
 
   if (!response.ok) {
-    throw new Error(`PayPal order creation failed: ${response.status}`);
+    throw new PayPalError(
+      "Could not create PayPal order.",
+      response.status,
+      await response.text(),
+    );
   }
 
-  return response.json() as Promise<{ id: string; status: string; demo?: boolean }>;
+  const order = (await response.json()) as PayPalOrder;
+
+  return {
+    ...order,
+    approveUrl: order.links?.find((link) => link.rel === "approve")?.href,
+  };
 }
 
 export async function capturePayPalOrder(orderId: string) {
@@ -106,7 +153,11 @@ export async function capturePayPalOrder(orderId: string) {
   );
 
   if (!response.ok) {
-    throw new Error(`PayPal capture failed: ${response.status}`);
+    throw new PayPalError(
+      "Could not capture PayPal order.",
+      response.status,
+      await response.text(),
+    );
   }
 
   return response.json();
