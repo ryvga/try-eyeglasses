@@ -11,6 +11,26 @@ docker compose logs -f web
 
 The container exposes Next.js on `127.0.0.1:3000`.
 
+Production also runs an `nginx` reverse proxy on ports `80` and `443`. The
+proxy terminates origin TLS for Cloudflare and forwards requests to the private
+Next.js container.
+
+Create an origin certificate before the first production start:
+
+```bash
+sudo mkdir -p /etc/tryeyeglasses/tls
+sudo openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+  -keyout /etc/tryeyeglasses/tls/origin.key \
+  -out /etc/tryeyeglasses/tls/origin.crt \
+  -subj "/CN=tryeyeglasses.com" \
+  -addext "subjectAltName=DNS:tryeyeglasses.com,DNS:www.tryeyeglasses.com,DNS:useeyeglasses.com,DNS:www.useeyeglasses.com"
+sudo chmod 600 /etc/tryeyeglasses/tls/origin.key
+sudo chmod 644 /etc/tryeyeglasses/tls/origin.crt
+```
+
+Cloudflare SSL/TLS mode can be `Full` with this self-signed origin certificate.
+For `Full (strict)`, replace it with a Cloudflare Origin Certificate.
+
 ## Secrets
 
 Do not commit production secrets and do not pass them inline in shell commands.
@@ -39,7 +59,7 @@ IMAGE_QUALITY=medium
 R2_ACCOUNT_ID=<cloudflare account id>
 R2_ACCESS_KEY_ID=<r2 token>
 R2_SECRET_ACCESS_KEY=<r2 secret>
-R2_BUCKET=tryeyeglasses-results
+R2_BUCKET=tryeyeglasses
 R2_PUBLIC_BASE_URL=https://assets.tryeyeglasses.com
 PAYPAL_ENV=live
 PAYPAL_CLIENT_ID=<paypal live client id>
