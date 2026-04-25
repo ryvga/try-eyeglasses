@@ -44,4 +44,35 @@ describe("createPayPalOrder", () => {
       cancel_url: "https://tryeyeglasses.com/checkout?cancelled=1",
     });
   });
+
+  it("uses the payer-action link when PayPal requires buyer action", async () => {
+    process.env.PAYPAL_ENV = "sandbox";
+    process.env.PAYPAL_CLIENT_ID = "client-id";
+    process.env.PAYPAL_CLIENT_SECRET = "client-secret";
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(Response.json({ access_token: "token" }))
+      .mockResolvedValueOnce(
+        Response.json({
+          id: "ORDER-456",
+          status: "PAYER_ACTION_REQUIRED",
+          links: [
+            {
+              rel: "payer-action",
+              href: "https://www.sandbox.paypal.com/checkoutnow?token=ORDER-456",
+              method: "GET",
+            },
+          ],
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { createPayPalOrder, CREDIT_PACKS } = await import("./paypal");
+    const order = await createPayPalOrder(CREDIT_PACKS[0]);
+
+    expect(order.approveUrl).toBe(
+      "https://www.sandbox.paypal.com/checkoutnow?token=ORDER-456",
+    );
+  });
 });

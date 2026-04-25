@@ -125,7 +125,9 @@ export async function createPayPalOrder(pack: CreditPack) {
 
   return {
     ...order,
-    approveUrl: order.links?.find((link) => link.rel === "approve")?.href,
+    approveUrl: order.links?.find((link) =>
+      ["approve", "payer-action"].includes(link.rel),
+    )?.href,
   };
 }
 
