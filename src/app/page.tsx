@@ -3,7 +3,6 @@ import {
   MenuIcon,
   ShieldCheckIcon,
   SparklesIcon,
-  UserIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -29,7 +28,8 @@ export default function Home() {
       />
       <header className="sticky top-0 z-30 border-b border-foreground/15 bg-background/92 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-[1480px] items-center justify-between px-4 md:px-6">
-          <Link href="/" className="text-2xl font-semibold tracking-normal">
+          <Link href="/" className="brand-wordmark text-2xl font-semibold tracking-normal">
+            <span className="brand-dot" aria-hidden />
             TryEyeglasses
           </Link>
           <nav className="hidden items-center gap-9 font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground lg:flex">
@@ -49,13 +49,6 @@ export default function Home() {
               Privacy
             </a>
             <ThemeToggle />
-            <a
-              href="/checkout"
-              className="hidden size-10 items-center justify-center rounded-md border border-foreground/15 bg-card md:inline-flex"
-              aria-label="Account"
-            >
-              <UserIcon className="size-4" aria-hidden />
-            </a>
             <a
               href="#studio"
               className={cn(
@@ -92,23 +85,23 @@ export default function Home() {
           <div className="grid gap-4 border-b border-foreground/15 pb-5 md:grid-cols-[1fr_auto] md:items-end">
             <div className="flex max-w-4xl flex-col gap-3">
               <Badge className="w-fit rounded border-foreground/50 bg-card font-mono uppercase text-foreground">
-                First AI try-on is free
+                Student-built AI virtual try-on
               </Badge>
               <h1 className="max-w-4xl text-4xl font-semibold leading-[1.05] tracking-normal text-foreground md:text-6xl">
-                Try on glasses online before you buy.
+                Try glasses on. In seconds.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
-                Upload a face photo, choose a frame, and preview realistic AI eyeglasses while keeping your background, lighting, expression, and face untouched.
+                Upload a face photo, select up to eight real-world frame references, and generate one detailed gpt-image-2 try-on board without fake overlays.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground md:justify-end">
               <span className="inline-flex items-center gap-2 rounded-md border border-foreground/15 bg-card px-3 py-2">
                 <ShieldCheckIcon className="size-4" aria-hidden />
-                Source deleted after generation
+                One free generation daily
               </span>
               <span className="inline-flex items-center gap-2 rounded-md border border-foreground/15 bg-card px-3 py-2">
                 <SparklesIcon className="size-4" aria-hidden />
-                Powered by gpt-image-2
+                Bring your own API key
               </span>
             </div>
           </div>

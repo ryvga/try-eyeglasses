@@ -50,6 +50,30 @@ describe("generateTryOnImage", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("uses a browser-provided API key and appends frame references", async () => {
+    process.env.OPENAI_API_KEY = "";
+    process.env.IMAGE_MODEL = "gpt-image-2";
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      Response.json({
+        data: [{ b64_json: Buffer.from("image-bytes").toString("base64") }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { generateTryOnImage } = await import("./provider");
+    await generateTryOnImage({
+      image: new File(["source"], "source.jpg", { type: "image/jpeg" }),
+      frameImage: new File(["frame"], "frame.jpg", { type: "image/jpeg" }),
+      prompt: "Add glasses",
+      apiKey: "sk-user-key",
+    });
+
+    const request = fetchMock.mock.calls[0][1];
+    expect(request.headers.Authorization).toBe("Bearer sk-user-key");
+    expect(request.body.getAll("image")).toHaveLength(2);
+  });
+
   it("returns a user-safe error after repeated upstream failures", async () => {
     process.env.OPENAI_API_KEY = "test-key";
     process.env.IMAGE_MODEL = "gpt-image-2";

@@ -7,8 +7,16 @@ describe("anonymous free gate", () => {
     expect(canUseAnonymousFreeGeneration(null)).toBe(true);
   });
 
-  it("blocks a second anonymous generation after the cookie is claimed", () => {
-    expect(canUseAnonymousFreeGeneration("claimed")).toBe(false);
+  it("blocks a second anonymous generation on the same day", () => {
+    expect(
+      canUseAnonymousFreeGeneration("2026-04-25", new Date("2026-04-25T12:00:00Z")),
+    ).toBe(false);
+  });
+
+  it("allows a new free generation on a later day", () => {
+    expect(
+      canUseAnonymousFreeGeneration("2026-04-24", new Date("2026-04-25T12:00:00Z")),
+    ).toBe(true);
   });
 
   it("hashes gate identifiers deterministically without storing raw input", () => {

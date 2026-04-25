@@ -39,9 +39,9 @@ export class PayPalError extends Error {
 }
 
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "starter", label: "Starter", credits: 5, amountCents: 500 },
-  { id: "creator", label: "Creator", credits: 20, amountCents: 1500 },
-  { id: "studio", label: "Studio", credits: 60, amountCents: 3600 },
+  { id: "tip", label: "Tip jar", credits: 3, amountCents: 100 },
+  { id: "supporter", label: "Supporter", credits: 10, amountCents: 300 },
+  { id: "studio", label: "Studio", credits: 30, amountCents: 800 },
 ];
 
 export function getCreditPack(packId: string) {

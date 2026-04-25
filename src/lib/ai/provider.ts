@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { env, requireEnv } from "@/lib/config";
+import { env } from "@/lib/config";
 
 const OPENAI_IMAGE_EDIT_ENDPOINT = "https://api.openai.com/v1/images/edits";
 const MAX_OPENAI_IMAGE_ATTEMPTS = 3;
@@ -18,7 +18,9 @@ export class ImageGenerationError extends Error {
 
 export type GenerateTryOnInput = {
   image: File;
+  frameImage?: File;
   prompt: string;
+  apiKey?: string;
 };
 
 export type GenerateTryOnResult = {
@@ -30,9 +32,13 @@ export type GenerateTryOnResult = {
 
 export async function generateTryOnImage({
   image,
+  frameImage,
   prompt,
+  apiKey,
 }: GenerateTryOnInput): Promise<GenerateTryOnResult> {
-  if (!env().OPENAI_API_KEY) {
+  const openAiApiKey = apiKey?.trim() || env().OPENAI_API_KEY;
+
+  if (!openAiApiKey) {
     return createDemoResult(prompt);
   }
 
@@ -42,9 +48,12 @@ export async function generateTryOnImage({
   formData.set("n", String(env().IMAGE_OUTPUT_COUNT));
   formData.set("size", env().IMAGE_SIZE);
   formData.set("quality", env().IMAGE_QUALITY);
-  formData.set("image", image);
+  formData.append("image", image);
+  if (frameImage) {
+    formData.append("image", frameImage);
+  }
 
-  const response = await requestOpenAIImageEdit(formData);
+  const response = await requestOpenAIImageEdit(formData, openAiApiKey);
 
   const payload = (await response.json()) as {
     data?: Array<{ b64_json?: string; url?: string }>;
@@ -79,7 +88,7 @@ export async function generateTryOnImage({
   throw new Error("OpenAI response did not include a usable image.");
 }
 
-async function requestOpenAIImageEdit(formData: FormData) {
+async function requestOpenAIImageEdit(formData: FormData, apiKey: string) {
   let lastStatus: number | undefined;
   let lastRequestId: string | null = null;
 
@@ -87,7 +96,7 @@ async function requestOpenAIImageEdit(formData: FormData) {
     const response = await fetch(OPENAI_IMAGE_EDIT_ENDPOINT, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${requireEnv("OPENAI_API_KEY")}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: formData,
     });

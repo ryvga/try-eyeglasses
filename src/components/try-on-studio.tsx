@@ -8,16 +8,20 @@ import {
   CheckIcon,
   CircleHelpIcon,
   EyeIcon,
-  HeartIcon,
+  FileImageIcon,
   ImageIcon,
   InfoIcon,
+  KeyRoundIcon,
   LoaderCircleIcon,
   LockIcon,
   RotateCwIcon,
+  SearchIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
   SparklesIcon,
   SunIcon,
   UploadIcon,
+  XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -48,18 +52,34 @@ type GenerationResult = {
   styleName: string;
   model: string;
   source: "openai" | "demo";
+  selectedStyles?: Array<{
+    id: string;
+    brand: string;
+    name: string;
+    approxPriceUsd: number;
+  }>;
 };
 
-const STYLE_TABS = ["Recommended", "Trending", "Round", "Square", "Rectangle"];
+const STYLE_TABS = ["Recommended", "Luxury", "Budget", "Round", "Square", "Rectangle"];
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_FRONT_FRAMES = 8;
+const MAX_THREE_VIEW_FRAMES = 3;
 
 export function TryOnStudio() {
-  const [selectedStyleId, setSelectedStyleId] = useState(GLASSES_STYLES[0].id);
+  const [selectedStyleIds, setSelectedStyleIds] = useState([GLASSES_STYLES[0].id]);
   const [activeTab, setActiveTab] = useState(STYLE_TABS[0]);
+  const [catalogQuery, setCatalogQuery] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [frameImage, setFrameImage] = useState<File | null>(null);
+  const [framePreviewUrl, setFramePreviewUrl] = useState<string | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [userStyleDescription, setUserStyleDescription] = useState("");
+  const [backgroundMode, setBackgroundMode] = useState<"keep" | "blur" | "replace">("blur");
+  const [customBackgroundPrompt, setCustomBackgroundPrompt] = useState("");
+  const [viewMode, setViewMode] = useState<"front" | "three-view">("front");
+  const [openAiApiKey, setOpenAiApiKey] = useState("");
+  const [comparePosition, setComparePosition] = useState(50);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -68,11 +88,26 @@ export function TryOnStudio() {
   const [isPending, startTransition] = useTransition();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const selectedStyle =
-    GLASSES_STYLES.find((style) => style.id === selectedStyleId) ??
-    GLASSES_STYLES[0];
+  const selectedStyles = selectedStyleIds
+    .map((styleId) => GLASSES_STYLES.find((style) => style.id === styleId))
+    .filter((style): style is GlassesStyle => Boolean(style));
+  const selectedStyle = selectedStyles[0] ?? GLASSES_STYLES[0];
+  const maxSelectedFrames =
+    viewMode === "three-view" ? MAX_THREE_VIEW_FRAMES : MAX_FRONT_FRAMES;
   const visibleStyles = GLASSES_STYLES.filter((style) => {
-    if (activeTab === "Recommended" || activeTab === "Trending") return true;
+    const query = catalogQuery.trim().toLowerCase();
+    if (
+      query &&
+      !`${style.brand} ${style.name} ${style.family} ${style.color}`
+        .toLowerCase()
+        .includes(query)
+    ) {
+      return false;
+    }
+
+    if (activeTab === "Recommended") return true;
+    if (activeTab === "Luxury") return style.approxPriceUsd >= 350;
+    if (activeTab === "Budget") return style.approxPriceUsd <= 150;
     return style.family.toLowerCase().includes(activeTab.toLowerCase());
   });
 
@@ -93,6 +128,12 @@ export function TryOnStudio() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (framePreviewUrl) URL.revokeObjectURL(framePreviewUrl);
+    };
+  }, [framePreviewUrl]);
 
   useEffect(() => {
     return () => {
@@ -202,6 +243,51 @@ export function TryOnStudio() {
     setPreviewUrl(URL.createObjectURL(file));
   }
 
+  function setFrameReferenceFile(file: File) {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Upload a JPG, PNG, or WEBP frame reference.");
+      return;
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("Use a frame image under 10MB.");
+      return;
+    }
+
+    if (framePreviewUrl) URL.revokeObjectURL(framePreviewUrl);
+    setFrameImage(file);
+    setResult(null);
+    setFramePreviewUrl(URL.createObjectURL(file));
+  }
+
+  function clearFrameReference() {
+    if (framePreviewUrl) URL.revokeObjectURL(framePreviewUrl);
+    setFrameImage(null);
+    setFramePreviewUrl(null);
+  }
+
+  function toggleStyle(styleId: string) {
+    setResult(null);
+    setSelectedStyleIds((current) => {
+      if (current.includes(styleId)) {
+        return current.length === 1
+          ? current
+          : current.filter((selectedId) => selectedId !== styleId);
+      }
+
+      if (current.length >= maxSelectedFrames) {
+        toast.info(
+          viewMode === "three-view"
+            ? "Three-view boards work best with up to 3 frames."
+            : "Select up to 8 frames for one landscape board.",
+        );
+        return current;
+      }
+
+      return [...current, styleId];
+    });
+  }
+
   function handlePhotoFile(file?: File) {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -222,8 +308,17 @@ export function TryOnStudio() {
     startTransition(async () => {
       const formData = new FormData();
       formData.set("image", photo);
-      formData.set("styleId", selectedStyleId);
+      if (frameImage) {
+        formData.set("frameImage", frameImage);
+      }
+      formData.set("styleIds", JSON.stringify(selectedStyleIds));
       formData.set("userStyleDescription", userStyleDescription);
+      formData.set("backgroundMode", backgroundMode);
+      formData.set("customBackgroundPrompt", customBackgroundPrompt);
+      formData.set("viewMode", viewMode);
+      if (openAiApiKey.trim()) {
+        formData.set("openAiApiKey", openAiApiKey.trim());
+      }
 
       const response = await fetch("/api/generations", {
         method: "POST",
@@ -232,7 +327,7 @@ export function TryOnStudio() {
 
       if (response.status === 402) {
         setPaywall(true);
-        toast.info("Create an account or buy credits for more try-ons.");
+        toast.info("Add your OpenAI API key or optionally buy credits.");
         return;
       }
 
@@ -353,13 +448,23 @@ export function TryOnStudio() {
           <Card className="paper-panel studio-entrance-delay">
             <CardHeader>
               <CardTitle className="font-mono text-[13px] uppercase tracking-[0.78px]">
-                2. Choose your style
+                2. Choose frames
               </CardTitle>
               <CardDescription>
-                Select a frame or describe your own reference.
+                Select up to {maxSelectedFrames} frames for one landscape result.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
+              <label className="relative">
+                <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={catalogQuery}
+                  onChange={(event) => setCatalogQuery(event.target.value)}
+                  placeholder="Search Ray-Ban, Moscot, round, tortoise..."
+                  className="h-11 bg-background pl-9"
+                />
+              </label>
+
               <div className="flex gap-6 overflow-x-auto border-b border-foreground/15 pb-1">
                 {STYLE_TABS.map((tab) => (
                   <button
@@ -374,44 +479,121 @@ export function TryOnStudio() {
                 ))}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-foreground/12 bg-background p-3 text-xs text-muted-foreground">
+                <SlidersHorizontalIcon className="size-4" aria-hidden />
+                <button
+                  type="button"
+                  data-active={viewMode === "front"}
+                  onClick={() => setViewMode("front")}
+                  className="rounded border border-foreground/15 px-2 py-1 font-mono uppercase data-[active=true]:border-foreground data-[active=true]:text-foreground"
+                >
+                  Front board
+                </button>
+                <button
+                  type="button"
+                  data-active={viewMode === "three-view"}
+                  onClick={() => {
+                    setViewMode("three-view");
+                    setSelectedStyleIds((ids) => ids.slice(0, MAX_THREE_VIEW_FRAMES));
+                  }}
+                  className="rounded border border-foreground/15 px-2 py-1 font-mono uppercase data-[active=true]:border-foreground data-[active=true]:text-foreground"
+                >
+                  3 POVs
+                </button>
+                <span className="ml-auto font-mono uppercase tracking-[0.66px]">
+                  {selectedStyleIds.length}/{maxSelectedFrames} selected
+                </span>
+              </div>
+
+              <div className="grid max-h-[520px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
                 {visibleStyles.map((style, index) => {
-                  const selected = selectedStyleId === style.id;
+                  const selected = selectedStyleIds.includes(style.id);
 
                   return (
                     <button
                       key={style.id}
                       type="button"
-                      className="group relative min-h-[156px] rounded-md border border-foreground/12 bg-background p-3 text-left transition hover:-translate-y-0.5 hover:border-foreground/45 data-[selected=true]:border-foreground data-[selected=true]:shadow-[0_0_0_1px_var(--foreground)]"
+                      className="group relative grid min-h-[118px] grid-cols-[88px_1fr] gap-3 rounded-md border border-foreground/12 bg-background p-3 text-left transition hover:-translate-y-0.5 hover:border-foreground/45 data-[selected=true]:border-foreground data-[selected=true]:shadow-[0_0_0_1px_var(--foreground)]"
                       data-selected={selected}
-                      onClick={() => setSelectedStyleId(style.id)}
+                      onClick={() => toggleStyle(style.id)}
                     >
-                      <FrameIllustration style={style} index={index} />
-                      <span className="mt-3 flex items-end justify-between gap-3">
-                        <span>
-                          <span className="block font-mono text-[12px] uppercase tracking-[0.72px]">
+                      <span className="flex items-center justify-center">
+                        <FrameIllustration style={style} index={index} compact />
+                      </span>
+                      <span className="flex min-w-0 flex-col justify-between gap-2">
+                        <span className="min-w-0">
+                          <span className="block truncate font-mono text-[11px] uppercase tracking-[0.66px] text-muted-foreground">
+                            {style.brand}
+                          </span>
+                          <span className="block truncate text-sm font-semibold">
                             {style.name}
                           </span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {style.color}
+                          <span className="mt-1 block truncate text-xs text-muted-foreground">
+                            {style.color} / {style.family}
                           </span>
                         </span>
-                        {selected ? (
-                          <CheckIcon className="size-4 text-foreground" aria-hidden />
-                        ) : null}
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-[11px] uppercase tracking-[0.66px]">
+                            ~${style.approxPriceUsd}
+                          </span>
+                          {selected ? (
+                            <CheckIcon className="size-4 text-foreground" aria-hidden />
+                          ) : null}
+                        </span>
                       </span>
                     </button>
                   );
                 })}
               </div>
 
-              <div className="grid gap-4 rounded-md border border-dashed border-foreground/25 bg-background p-4 md:grid-cols-[auto_1fr] md:items-center">
-                <div className="flex size-14 items-center justify-center rounded-full bg-secondary">
-                  <FrameIllustration style={selectedStyle} compact />
+              <div className="grid gap-3 rounded-md border border-dashed border-foreground/25 bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-secondary">
+                      <FileImageIcon className="size-4" aria-hidden />
+                    </div>
+                    <div>
+                      <p className="font-mono text-[12px] uppercase tracking-[0.72px]">
+                        Your own frame
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Upload a reference image or describe it.
+                      </p>
+                    </div>
+                  </div>
+                  {framePreviewUrl ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="paper-button bg-card"
+                      onClick={clearFrameReference}
+                      aria-label="Remove frame reference"
+                    >
+                      <XIcon className="size-4" aria-hidden />
+                    </Button>
+                  ) : null}
                 </div>
+                <Input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="bg-card"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) setFrameReferenceFile(file);
+                  }}
+                />
+                {framePreviewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={framePreviewUrl}
+                    alt="Uploaded frame reference"
+                    className="h-24 w-full rounded border border-foreground/15 object-contain"
+                  />
+                ) : null}
                 <label className="flex flex-col gap-2">
                   <span className="font-mono text-[12px] uppercase tracking-[0.72px]">
-                    Upload your own frame notes
+                    Frame notes
                   </span>
                   <Textarea
                     value={userStyleDescription}
@@ -420,6 +602,57 @@ export function TryOnStudio() {
                     className="min-h-20 resize-none rounded-md bg-card"
                   />
                 </label>
+              </div>
+
+              <div className="grid gap-3 rounded-md border border-foreground/12 bg-background p-4">
+                <p className="font-mono text-[12px] uppercase tracking-[0.72px]">
+                  Background
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    ["blur", "Blur"],
+                    ["keep", "Keep"],
+                    ["replace", "Replace"],
+                  ].map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      data-active={backgroundMode === value}
+                      onClick={() =>
+                        setBackgroundMode(value as "keep" | "blur" | "replace")
+                      }
+                      className="paper-button bg-card px-2 py-2 data-[active=true]:bg-foreground data-[active=true]:text-background"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {backgroundMode === "replace" ? (
+                  <Input
+                    value={customBackgroundPrompt}
+                    onChange={(event) => setCustomBackgroundPrompt(event.target.value)}
+                    placeholder="Soft daylight optical studio, warm paper backdrop..."
+                    className="bg-card"
+                  />
+                ) : null}
+              </div>
+
+              <div className="grid gap-2 rounded-md border border-foreground/12 bg-background p-4">
+                <label className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.72px]">
+                  <KeyRoundIcon className="size-4" aria-hidden />
+                  Optional OpenAI API key
+                </label>
+                <Input
+                  type="password"
+                  value={openAiApiKey}
+                  onChange={(event) => setOpenAiApiKey(event.target.value)}
+                  placeholder="sk-... use your key for unlimited generations"
+                  className="bg-card"
+                />
+                <p className="text-xs leading-5 text-muted-foreground">
+                  Kept in this page only and sent only with generation requests.
+                  Free mode gives one generation per day.
+                </p>
               </div>
 
               <Button
@@ -433,7 +666,7 @@ export function TryOnStudio() {
                 ) : (
                   <SparklesIcon data-icon="inline-start" />
                 )}
-                Generate try-on
+                Generate {selectedStyleIds.length > 1 ? "board" : "try-on"}
                 <ArrowRightIcon data-icon="inline-end" />
               </Button>
               <p className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
@@ -469,7 +702,50 @@ export function TryOnStudio() {
             </CardHeader>
             <CardContent className="flex min-h-[560px] flex-col gap-4">
               <div className="relative flex flex-1 items-center justify-center overflow-hidden rounded-md border border-foreground/15 bg-background">
-                {result ? (
+                {result && previewUrl ? (
+                  <div className="relative size-full overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt="Original uploaded face"
+                      className="absolute inset-0 size-full object-cover"
+                    />
+                    <div
+                      className="absolute inset-0 overflow-hidden bg-background"
+                      style={{ clipPath: `inset(0 ${100 - comparePosition}% 0 0)` }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={result.imageUrl}
+                        alt={`Generated try-on with ${result.styleName}`}
+                        className="size-full object-contain"
+                      />
+                    </div>
+                    <div
+                      className="absolute inset-y-0 w-0.5 bg-card shadow"
+                      style={{ left: `${comparePosition}%` }}
+                    >
+                      <span className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground/15 bg-card">
+                        <ArrowRightIcon className="size-4" aria-hidden />
+                      </span>
+                    </div>
+                    <span className="absolute left-3 top-3 rounded border border-foreground/20 bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-[0.66px]">
+                      Original
+                    </span>
+                    <span className="absolute right-3 top-3 rounded border border-foreground/20 bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-[0.66px]">
+                      AI result
+                    </span>
+                    <input
+                      type="range"
+                      min="10"
+                      max="90"
+                      value={comparePosition}
+                      aria-label="Compare before and after"
+                      onChange={(event) => setComparePosition(Number(event.target.value))}
+                      className="absolute inset-x-5 bottom-4"
+                    />
+                  </div>
+                ) : result ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={result.imageUrl}
@@ -477,27 +753,18 @@ export function TryOnStudio() {
                     className="size-full object-contain"
                   />
                 ) : previewUrl ? (
-                  <div className="grid size-full grid-cols-2">
-                    <PreviewHalf label="Before" imageUrl={previewUrl} />
-                    <div className="relative flex items-center justify-center overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl}
-                        alt="After generation placeholder"
-                        className="size-full object-cover opacity-45 grayscale"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-background/40 p-6 text-center backdrop-blur-[1px]">
-                        <p className="max-w-[14rem] font-mono text-[12px] uppercase tracking-[0.72px] text-foreground">
-                          Generate to preview the selected frame on your photo
-                        </p>
-                      </div>
-                      <span className="absolute right-3 top-3 rounded border border-foreground/20 bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-[0.66px]">
-                        After
-                      </span>
+                  <div className="relative size-full">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewUrl}
+                      alt="Uploaded face preview"
+                      className="size-full object-cover opacity-60 grayscale"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/35 p-6 text-center backdrop-blur-[1px]">
+                      <p className="max-w-[15rem] font-mono text-[12px] uppercase tracking-[0.72px] text-foreground">
+                        Generate to preview real frames. No fake overlay.
+                      </p>
                     </div>
-                    <span className="absolute left-1/2 top-1/2 flex size-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-foreground/15 bg-card shadow-sm">
-                      <ArrowRightIcon className="size-4" aria-hidden />
-                    </span>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-center text-muted-foreground">
@@ -509,27 +776,30 @@ export function TryOnStudio() {
                 )}
               </div>
 
-              <div className="grid grid-cols-[1fr_auto] gap-3 rounded-md border border-foreground/12 bg-background p-3">
+              <div className="grid gap-3 rounded-md border border-foreground/12 bg-background p-3">
                 <div className="flex items-center gap-3">
                   <FrameIllustration style={selectedStyle} compact />
                   <div>
                     <p className="font-mono text-[12px] uppercase tracking-[0.72px]">
-                      {selectedStyle.name}
+                      {selectedStyles.length} selected / {selectedStyle.brand}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {selectedStyle.color}
+                      {selectedStyles.map((style) => style.name).join(", ")}
                     </p>
                   </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="paper-button bg-card"
-                  aria-label="Save style"
-                >
-                  <HeartIcon className="size-4" aria-hidden />
-                </Button>
+                {result?.selectedStyles?.length ? (
+                  <div className="flex gap-2 overflow-x-auto">
+                    {result.selectedStyles.map((style) => (
+                      <span
+                        key={style.id}
+                        className="shrink-0 rounded border border-foreground/15 bg-card px-2 py-1 text-xs"
+                      >
+                        {style.brand} {style.name} ~${style.approxPriceUsd}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               {isPending ? (
@@ -552,17 +822,22 @@ export function TryOnStudio() {
               {paywall ? (
                 <div className="rounded-md border border-foreground/15 bg-background p-4">
                   <p className="text-sm text-muted-foreground">
-                    Your first free generation is used. Create an account and add credits to keep trying frames.
+                    Your free generation for today is used. Add your OpenAI API key for unlimited runs, or optionally buy credits to support the project.
                   </p>
-                  <Link
-                    href="/checkout"
-                    className={cn(
-                      buttonVariants(),
-                      "paper-button mt-3 w-full bg-foreground text-background hover:bg-foreground/90",
-                    )}
-                  >
-                    Continue to credits
-                  </Link>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <a href="#studio" className={cn(buttonVariants({ variant: "outline" }), "paper-button bg-card")}>
+                      Add API key
+                    </a>
+                    <Link
+                      href="/checkout"
+                      className={cn(
+                        buttonVariants(),
+                        "paper-button bg-foreground text-background hover:bg-foreground/90",
+                      )}
+                    >
+                      Optional credits
+                    </Link>
+                  </div>
                 </div>
               ) : null}
             </CardContent>
@@ -634,18 +909,6 @@ export function TryOnStudio() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function PreviewHalf({ label, imageUrl }: { label: string; imageUrl: string }) {
-  return (
-    <div className="relative overflow-hidden border-r border-foreground/10">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={imageUrl} alt={`${label} generation`} className="size-full object-cover" />
-      <span className="absolute left-3 top-3 rounded border border-foreground/20 bg-card px-2 py-1 font-mono text-[11px] uppercase tracking-[0.66px]">
-        {label}
-      </span>
-    </div>
   );
 }
 

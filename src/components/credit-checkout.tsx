@@ -85,13 +85,13 @@ export function CreditCheckout() {
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-16 md:px-6 md:py-24">
       <div className="max-w-3xl">
         <p className="font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground">
-          PayPal Standard Checkout
+          Optional support
         </p>
         <h1 className="mt-3 text-4xl font-semibold leading-tight text-foreground md:text-6xl">
-          Add credits for more try-ons.
+          Keep the student project running.
         </h1>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
-          Choose a pack, approve in PayPal sandbox, then return here so we can unlock credits.
+          You can use your own OpenAI API key for unlimited generations. These sandbox PayPal credits are a tiny support path while testing.
         </p>
       </div>
 
