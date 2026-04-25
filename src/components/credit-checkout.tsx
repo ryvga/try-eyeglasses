@@ -82,7 +82,7 @@ export function CreditCheckout() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-16 md:px-6 md:py-24">
+    <section className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-16 md:px-6 md:py-24">
       <div className="max-w-3xl">
         <p className="font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground">
           Optional support
@@ -137,6 +137,6 @@ export function CreditCheckout() {
             ? "Credits unlocked"
             : "Continue with PayPal"}
       </Button>
-    </main>
+    </section>
   );
 }

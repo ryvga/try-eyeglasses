@@ -1,9 +1,11 @@
+import { SiteShell } from "@/components/site-shell";
 import { Badge } from "@/components/ui/badge";
 
 export type ContentPageProps = {
   eyebrow: string;
   title: string;
   description: string;
+  active?: "try-on" | "collections" | "how-it-works" | "faq" | "privacy";
   sections: Array<{ title: string; body: string }>;
 };
 
@@ -11,10 +13,11 @@ export function ContentPage({
   eyebrow,
   title,
   description,
+  active,
   sections,
 }: ContentPageProps) {
   return (
-    <main className="flex-1">
+    <SiteShell active={active}>
       <section className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-16 md:px-6 md:py-24">
         <div className="flex flex-col gap-4">
           <Badge className="w-fit rounded border-foreground/50 bg-card font-mono uppercase text-foreground">
@@ -41,6 +44,6 @@ export function ContentPage({
           ))}
         </div>
       </section>
-    </main>
+    </SiteShell>
   );
 }

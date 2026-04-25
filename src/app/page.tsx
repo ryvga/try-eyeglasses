@@ -1,15 +1,8 @@
-import {
-  ArrowRightIcon,
-  MenuIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-} from "lucide-react";
+import { ShieldCheckIcon, SparklesIcon } from "lucide-react";
 import Link from "next/link";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { SiteShell } from "@/components/site-shell";
 import { TryOnStudio } from "@/components/try-on-studio";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { canonicalUrl, jsonLd } from "@/lib/seo";
 
 export const metadata = {
@@ -20,55 +13,12 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col">
+    <SiteShell active="try-on">
       <script
         type="application/ld+json"
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
       />
-      <header className="sticky top-0 z-30 border-b border-foreground/15 bg-background/92 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-[1480px] items-center justify-between px-4 md:px-6">
-          <Link href="/" className="brand-wordmark text-2xl font-semibold tracking-normal">
-            <span className="brand-dot" aria-hidden />
-            TryEyeglasses
-          </Link>
-          <nav className="hidden items-center gap-9 font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground lg:flex">
-            <a className="border-b border-foreground pb-1 text-foreground" href="#studio">
-              Try on
-            </a>
-            <a href="/try-on-glasses">Collections</a>
-            <a href="/virtual-glasses-try-on">How it works</a>
-            <a href="/faq">FAQ</a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <a
-              href="/privacy"
-              className="hidden items-center gap-2 font-mono text-[12px] uppercase tracking-[0.72px] text-muted-foreground md:inline-flex"
-            >
-              <ShieldCheckIcon className="size-4" aria-hidden />
-              Privacy
-            </a>
-            <ThemeToggle />
-            <a
-              href="#studio"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "paper-button hidden bg-card md:inline-flex",
-              )}
-            >
-              Start free
-              <ArrowRightIcon data-icon="inline-end" />
-            </a>
-            <button
-              type="button"
-              className="paper-button flex size-10 items-center justify-center bg-card lg:hidden"
-              aria-label="Open menu"
-            >
-              <MenuIcon className="size-4" aria-hidden />
-            </button>
-          </div>
-        </div>
-      </header>
 
       <div id="studio">
         <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-4 pt-5 md:px-6">
@@ -125,19 +75,7 @@ export default function Home() {
           />
         </div>
       </section>
-      <footer className="border-t border-foreground/15 bg-foreground text-background">
-        <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between md:px-6">
-          <p className="font-mono text-xs uppercase tracking-[0.72px]">
-            TryEyeglasses / AI eyeglasses preview
-          </p>
-          <div className="flex gap-4 text-sm">
-            <a href="/privacy">Privacy</a>
-            <a href="/terms">Terms</a>
-            <a href="/faq">FAQ</a>
-          </div>
-        </div>
-      </footer>
-    </main>
+    </SiteShell>
   );
 }
 

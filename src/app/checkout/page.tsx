@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CreditCheckout } from "@/components/credit-checkout";
+import { SiteShell } from "@/components/site-shell";
 
 export const metadata: Metadata = {
   title: "Buy Try-On Credits",
@@ -12,8 +13,10 @@ export const metadata: Metadata = {
 
 export default function CheckoutPage() {
   return (
-    <Suspense fallback={null}>
-      <CreditCheckout />
-    </Suspense>
+    <SiteShell>
+      <Suspense fallback={null}>
+        <CreditCheckout />
+      </Suspense>
+    </SiteShell>
   );
 }

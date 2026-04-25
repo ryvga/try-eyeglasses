@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default function AiEyeglassesTryOnPage() {
   return (
     <ContentPage
+      active="try-on"
       eyebrow="AI eyeglasses try-on"
       title="AI eyeglasses try-on powered by gpt-image-2."
       description="The generation layer is designed for one strong result per request: realistic, budget-conscious, and specific to eyewear."

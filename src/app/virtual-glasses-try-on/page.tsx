@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default function VirtualGlassesTryOnPage() {
   return (
     <ContentPage
+      active="how-it-works"
       eyebrow="Virtual glasses try-on"
       title="A simple virtual glasses try-on for real buying decisions."
       description="No long wizard and no fake makeover. Start with a photo, pick a frame, and compare realistic results."

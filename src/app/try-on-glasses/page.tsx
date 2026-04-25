@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default function TryOnGlassesPage() {
   return (
     <ContentPage
+      active="collections"
       eyebrow="Try on glasses"
       title="Try on glasses online with one realistic AI preview."
       description="TryEyeglasses helps you compare frame shapes before buying online. Upload a clear photo, choose a style, and get a realistic eyeglasses preview."

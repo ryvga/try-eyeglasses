@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <ContentPage
+      active="privacy"
       eyebrow="Privacy"
       title="Privacy policy."
       description="This MVP is designed to minimize sensitive image retention."

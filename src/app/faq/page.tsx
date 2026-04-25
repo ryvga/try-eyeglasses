@@ -12,6 +12,7 @@ export const metadata: Metadata = {
 export default function FaqPage() {
   return (
     <ContentPage
+      active="faq"
       eyebrow="FAQ"
       title="Questions about AI glasses try-on."
       description="Clear answers for users before they upload a photo or buy credits."
