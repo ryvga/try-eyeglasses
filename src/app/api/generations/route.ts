@@ -8,7 +8,7 @@ import {
   generations,
   glassesStyles,
 } from "@/db/schema";
-import { generateTryOnImage } from "@/lib/ai/provider";
+import { generateTryOnImage, ImageGenerationError } from "@/lib/ai/provider";
 import { buildTryOnPrompt } from "@/lib/ai/prompt";
 import { env } from "@/lib/config";
 import {
@@ -159,6 +159,14 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    if (error instanceof ImageGenerationError) {
+      console.error("Image generation failed", {
+        generationId,
+        status: error.status,
+        requestId: error.requestId,
+      });
+    }
+
     return NextResponse.json(
       {
         error: "GENERATION_FAILED",

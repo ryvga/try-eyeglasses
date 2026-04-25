@@ -1,5 +1,12 @@
-import { ArrowRightIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  MenuIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { TryOnStudio } from "@/components/try-on-studio";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,46 +27,86 @@ export default function Home() {
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd()) }}
       />
-      <header className="sticky top-0 z-30 border-b border-stone-300 bg-background/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-foreground/15 bg-background/92 backdrop-blur">
         <div className="mx-auto flex h-16 w-full max-w-[1480px] items-center justify-between px-4 md:px-6">
-          <Link href="/" className="font-mono text-sm font-bold uppercase tracking-[0.84px]">
+          <Link href="/" className="text-2xl font-semibold tracking-normal">
             TryEyeglasses
           </Link>
-          <nav className="hidden items-center gap-6 text-sm text-stone-600 md:flex">
-            <a href="/try-on-glasses">Try on glasses</a>
-            <a href="/virtual-glasses-try-on">Virtual try-on</a>
+          <nav className="hidden items-center gap-9 font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground lg:flex">
+            <a className="border-b border-foreground pb-1 text-foreground" href="#studio">
+              Try on
+            </a>
+            <a href="/try-on-glasses">Collections</a>
+            <a href="/virtual-glasses-try-on">How it works</a>
             <a href="/faq">FAQ</a>
           </nav>
-          <a
-            href="#studio"
-            className={cn(buttonVariants({ variant: "outline" }), "paper-button")}
-          >
-            Start free
-            <ArrowRightIcon data-icon="inline-end" />
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/privacy"
+              className="hidden items-center gap-2 font-mono text-[12px] uppercase tracking-[0.72px] text-muted-foreground md:inline-flex"
+            >
+              <ShieldCheckIcon className="size-4" aria-hidden />
+              Privacy
+            </a>
+            <ThemeToggle />
+            <a
+              href="/checkout"
+              className="hidden size-10 items-center justify-center rounded-md border border-foreground/15 bg-card md:inline-flex"
+              aria-label="Account"
+            >
+              <UserIcon className="size-4" aria-hidden />
+            </a>
+            <a
+              href="#studio"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "paper-button hidden bg-card md:inline-flex",
+              )}
+            >
+              Start free
+              <ArrowRightIcon data-icon="inline-end" />
+            </a>
+            <button
+              type="button"
+              className="paper-button flex size-10 items-center justify-center bg-card lg:hidden"
+              aria-label="Open menu"
+            >
+              <MenuIcon className="size-4" aria-hidden />
+            </button>
+          </div>
         </div>
       </header>
 
       <div id="studio">
         <div className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-4 pt-5 md:px-6">
-          <div className="grid gap-4 border-b border-stone-300 pb-5 md:grid-cols-[1fr_auto] md:items-end">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.72px] text-muted-foreground"
+          >
+            <Link href="/">Home</Link>
+            <span>/</span>
+            <a href="#studio" className="text-foreground">
+              Try on glasses
+            </a>
+          </nav>
+          <div className="grid gap-4 border-b border-foreground/15 pb-5 md:grid-cols-[1fr_auto] md:items-end">
             <div className="flex max-w-4xl flex-col gap-3">
-              <Badge className="w-fit rounded border-stone-600 bg-stone-50 font-mono uppercase text-stone-800">
+              <Badge className="w-fit rounded border-foreground/50 bg-card font-mono uppercase text-foreground">
                 First AI try-on is free
               </Badge>
-              <h1 className="max-w-4xl text-4xl font-semibold leading-[1.05] tracking-normal text-stone-950 md:text-6xl">
+              <h1 className="max-w-4xl text-4xl font-semibold leading-[1.05] tracking-normal text-foreground md:text-6xl">
                 Try on glasses online before you buy.
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-stone-600 md:text-lg">
+              <p className="max-w-2xl text-base leading-7 text-muted-foreground md:text-lg">
                 Upload a face photo, choose a frame, and preview realistic AI eyeglasses while keeping your background, lighting, expression, and face untouched.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 text-sm text-stone-600 md:justify-end">
-              <span className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-stone-50 px-3 py-2">
+            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground md:justify-end">
+              <span className="inline-flex items-center gap-2 rounded-md border border-foreground/15 bg-card px-3 py-2">
                 <ShieldCheckIcon className="size-4" aria-hidden />
                 Source deleted after generation
               </span>
-              <span className="inline-flex items-center gap-2 rounded-md border border-stone-300 bg-stone-50 px-3 py-2">
+              <span className="inline-flex items-center gap-2 rounded-md border border-foreground/15 bg-card px-3 py-2">
                 <SparklesIcon className="size-4" aria-hidden />
                 Powered by gpt-image-2
               </span>
@@ -69,7 +116,7 @@ export default function Home() {
         <TryOnStudio />
       </div>
 
-      <section className="border-t border-stone-300 bg-[#fffdf8]">
+      <section className="border-t border-foreground/15 bg-card">
         <div className="mx-auto grid max-w-[1480px] gap-8 px-4 py-14 md:grid-cols-3 md:px-6">
           <SeoBlock
             title="AI glasses try-on"
@@ -85,7 +132,7 @@ export default function Home() {
           />
         </div>
       </section>
-      <footer className="border-t border-stone-300 bg-stone-950 text-stone-300">
+      <footer className="border-t border-foreground/15 bg-foreground text-background">
         <div className="mx-auto flex max-w-[1480px] flex-col gap-4 px-4 py-8 md:flex-row md:items-center md:justify-between md:px-6">
           <p className="font-mono text-xs uppercase tracking-[0.72px]">
             TryEyeglasses / AI eyeglasses preview
@@ -103,9 +150,9 @@ export default function Home() {
 
 function SeoBlock({ title, body }: { title: string; body: string }) {
   return (
-    <article className="border-l border-stone-300 pl-4">
-      <h2 className="text-xl font-semibold text-stone-950">{title}</h2>
-      <p className="mt-3 leading-7 text-stone-600">{body}</p>
+    <article className="border-l border-foreground/20 pl-4">
+      <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+      <p className="mt-3 leading-7 text-muted-foreground">{body}</p>
     </article>
   );
 }

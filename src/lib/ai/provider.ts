@@ -1,6 +1,21 @@
 import { nanoid } from "nanoid";
 import { env, requireEnv } from "@/lib/config";
 
+const OPENAI_IMAGE_EDIT_ENDPOINT = "https://api.openai.com/v1/images/edits";
+const MAX_OPENAI_IMAGE_ATTEMPTS = 3;
+const RETRYABLE_STATUSES = new Set([408, 409, 429, 500, 502, 503, 504]);
+
+export class ImageGenerationError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly requestId?: string | null,
+  ) {
+    super(message);
+    this.name = "ImageGenerationError";
+  }
+}
+
 export type GenerateTryOnInput = {
   image: File;
   prompt: string;
@@ -29,18 +44,7 @@ export async function generateTryOnImage({
   formData.set("quality", env().IMAGE_QUALITY);
   formData.set("image", image);
 
-  const response = await fetch("https://api.openai.com/v1/images/edits", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${requireEnv("OPENAI_API_KEY")}`,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`OpenAI image edit failed: ${response.status} ${body}`);
-  }
+  const response = await requestOpenAIImageEdit(formData);
 
   const payload = (await response.json()) as {
     data?: Array<{ b64_json?: string; url?: string }>;
@@ -73,6 +77,61 @@ export async function generateTryOnImage({
   }
 
   throw new Error("OpenAI response did not include a usable image.");
+}
+
+async function requestOpenAIImageEdit(formData: FormData) {
+  let lastStatus: number | undefined;
+  let lastRequestId: string | null = null;
+
+  for (let attempt = 1; attempt <= MAX_OPENAI_IMAGE_ATTEMPTS; attempt += 1) {
+    const response = await fetch(OPENAI_IMAGE_EDIT_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${requireEnv("OPENAI_API_KEY")}`,
+      },
+      body: formData,
+    });
+
+    if (response.ok) {
+      return response;
+    }
+
+    lastStatus = response.status;
+    lastRequestId = response.headers.get("x-request-id");
+
+    if (
+      !RETRYABLE_STATUSES.has(response.status) ||
+      attempt === MAX_OPENAI_IMAGE_ATTEMPTS
+    ) {
+      throw new ImageGenerationError(
+        publicOpenAIErrorMessage(response.status),
+        response.status,
+        lastRequestId,
+      );
+    }
+
+    await delay(450 * attempt);
+  }
+
+  throw new ImageGenerationError(
+    "OpenAI image service had a temporary error. Please try again.",
+    lastStatus,
+    lastRequestId,
+  );
+}
+
+function publicOpenAIErrorMessage(status: number) {
+  if (status >= 500 || status === 408 || status === 409 || status === 429) {
+    return "OpenAI image service had a temporary error. Please try again.";
+  }
+
+  return "The image generation request could not be completed. Please try a different photo.";
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function createDemoResult(prompt: string): GenerateTryOnResult {

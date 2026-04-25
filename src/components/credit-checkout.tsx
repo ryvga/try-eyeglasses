@@ -50,13 +50,13 @@ export function CreditCheckout() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-4 py-16 md:px-6 md:py-24">
       <div className="max-w-3xl">
-        <p className="font-mono text-[13px] uppercase tracking-[0.78px] text-stone-500">
+        <p className="font-mono text-[13px] uppercase tracking-[0.78px] text-muted-foreground">
           PayPal Standard Checkout
         </p>
-        <h1 className="mt-3 text-4xl font-semibold leading-tight text-stone-950 md:text-6xl">
+        <h1 className="mt-3 text-4xl font-semibold leading-tight text-foreground md:text-6xl">
           Add credits for more try-ons.
         </h1>
-        <p className="mt-4 text-lg leading-8 text-stone-600">
+        <p className="mt-4 text-lg leading-8 text-muted-foreground">
           The server already creates and captures PayPal orders. Production can mount the PayPal JavaScript button with the same endpoints.
         </p>
       </div>
@@ -68,7 +68,7 @@ export function CreditCheckout() {
             type="button"
             onClick={() => setSelectedPackId(pack.id)}
             data-selected={selectedPackId === pack.id}
-            className="rounded-md border border-stone-300 bg-[#fffdf8] text-left transition hover:border-stone-600 data-[selected=true]:border-stone-800"
+            className="rounded-md border border-foreground/15 bg-card text-left transition hover:border-foreground/45 data-[selected=true]:border-foreground"
           >
             <Card className="border-0 bg-transparent shadow-none">
               <CardHeader>
@@ -86,7 +86,7 @@ export function CreditCheckout() {
       </div>
 
       <Button
-        className="paper-button h-12 w-fit bg-stone-950 text-stone-50 hover:bg-stone-800"
+        className="paper-button h-12 w-fit bg-foreground text-background hover:bg-foreground/90"
         onClick={createOrder}
         disabled={isPending}
       >
