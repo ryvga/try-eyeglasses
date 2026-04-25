@@ -74,7 +74,8 @@ describe("generateTryOnImage", () => {
 
     const request = fetchMock.mock.calls[0][1];
     expect(request.headers.Authorization).toBe("Bearer sk-user-key");
-    expect(request.body.getAll("image")).toHaveLength(3);
+    expect(request.body.getAll("image")).toHaveLength(0);
+    expect(request.body.getAll("image[]")).toHaveLength(3);
   });
 
   it("returns a user-safe error after repeated upstream failures", async () => {

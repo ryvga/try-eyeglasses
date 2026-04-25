@@ -50,12 +50,13 @@ export async function generateTryOnImage({
   formData.set("n", String(env().IMAGE_OUTPUT_COUNT));
   formData.set("size", env().IMAGE_SIZE);
   formData.set("quality", env().IMAGE_QUALITY);
-  formData.append("image", image);
-  if (frameImage) {
-    formData.append("image", frameImage);
-  }
-  for (const referenceImage of referenceImages.slice(0, 8)) {
-    formData.append("image", referenceImage);
+
+  const images = [image, frameImage, ...referenceImages.slice(0, 8)].filter(
+    (inputImage): inputImage is File => Boolean(inputImage),
+  );
+  const imageFieldName = images.length > 1 ? "image[]" : "image";
+  for (const inputImage of images) {
+    formData.append(imageFieldName, inputImage);
   }
 
   const response = await requestOpenAIImageEdit(formData, openAiApiKey);
