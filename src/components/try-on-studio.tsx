@@ -517,8 +517,8 @@ export function TryOnStudio() {
                       data-selected={selected}
                       onClick={() => toggleStyle(style.id)}
                     >
-                      <span className="flex items-center justify-center">
-                        <FrameIllustration style={style} index={index} compact />
+                      <span className="flex items-center justify-center overflow-hidden rounded border border-foreground/10 bg-card">
+                        <FramePreview style={style} index={index} compact />
                       </span>
                       <span className="flex min-w-0 flex-col justify-between gap-2">
                         <span className="min-w-0">
@@ -778,7 +778,7 @@ export function TryOnStudio() {
 
               <div className="grid gap-3 rounded-md border border-foreground/12 bg-background p-3">
                 <div className="flex items-center gap-3">
-                  <FrameIllustration style={selectedStyle} compact />
+                  <FramePreview style={selectedStyle} compact />
                   <div>
                     <p className="font-mono text-[12px] uppercase tracking-[0.72px]">
                       {selectedStyles.length} selected / {selectedStyle.brand}
@@ -943,6 +943,33 @@ function Feature({
       </span>
     </div>
   );
+}
+
+function FramePreview({
+  style,
+  compact = false,
+  index = 0,
+}: {
+  style: GlassesStyle;
+  compact?: boolean;
+  index?: number;
+}) {
+  if (style.imageUrl) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={style.imageUrl}
+        alt={style.imageAlt ?? `${style.brand} ${style.name} frame`}
+        loading="lazy"
+        className={cn(
+          "mx-auto block w-full object-contain mix-blend-multiply dark:mix-blend-normal",
+          compact ? "h-16" : "h-28",
+        )}
+      />
+    );
+  }
+
+  return <FrameIllustration style={style} compact={compact} index={index} />;
 }
 
 function FrameIllustration({

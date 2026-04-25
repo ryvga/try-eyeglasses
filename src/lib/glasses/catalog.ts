@@ -1,3 +1,5 @@
+import { RETAILER_FRAME_SEEDS } from "@/lib/glasses/retailer-catalog";
+
 export type GlassesStyle = {
   id: string;
   brand: string;
@@ -9,6 +11,8 @@ export type GlassesStyle = {
   approxPriceUsd: number;
   retailer: string;
   sourceUrl?: string;
+  imageUrl?: string;
+  imageAlt?: string;
   promptNotes: string;
 };
 
@@ -112,7 +116,7 @@ function slug(value: string) {
     .replace(/(^-|-$)/g, "");
 }
 
-const generatedSeeds = EXTRA_BRANDS.flatMap((brand, brandIndex) =>
+const syntheticSeeds = EXTRA_BRANDS.flatMap((brand, brandIndex) =>
   EXTRA_MODELS[brandIndex].map((name, modelIndex) => {
     const family = FAMILIES[(brandIndex + modelIndex) % FAMILIES.length];
     const color = COLORS[(brandIndex * 2 + modelIndex) % COLORS.length];
@@ -134,13 +138,23 @@ const generatedSeeds = EXTRA_BRANDS.flatMap((brand, brandIndex) =>
   }),
 );
 
-export const GLASSES_STYLES: GlassesStyle[] = [...FRAME_SEEDS, ...generatedSeeds]
+const fallbackStyles = [...FRAME_SEEDS, ...syntheticSeeds]
   .slice(0, 100)
   .map((seed) => ({
     id: `${slug(seed.brand)}-${slug(seed.name)}`,
     ...seed,
     promptNotes: `${seed.brand} ${seed.name}, ${seed.shapeNotes}; approximate retail price $${seed.approxPriceUsd}; transparent prescription lenses, realistic lens reflections, accurate bridge placement, real optical frame proportions`,
   }));
+
+export const GLASSES_STYLES: GlassesStyle[] = [
+  ...RETAILER_FRAME_SEEDS,
+  ...fallbackStyles.filter(
+    (style) =>
+      !RETAILER_FRAME_SEEDS.some(
+        (retailerStyle) => retailerStyle.id === style.id,
+      ),
+  ),
+].slice(0, 140);
 
 export function getStyleById(styleId: string) {
   return GLASSES_STYLES.find((style) => style.id === styleId);

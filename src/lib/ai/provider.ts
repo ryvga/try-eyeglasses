@@ -19,6 +19,7 @@ export class ImageGenerationError extends Error {
 export type GenerateTryOnInput = {
   image: File;
   frameImage?: File;
+  referenceImages?: File[];
   prompt: string;
   apiKey?: string;
 };
@@ -33,6 +34,7 @@ export type GenerateTryOnResult = {
 export async function generateTryOnImage({
   image,
   frameImage,
+  referenceImages = [],
   prompt,
   apiKey,
 }: GenerateTryOnInput): Promise<GenerateTryOnResult> {
@@ -51,6 +53,9 @@ export async function generateTryOnImage({
   formData.append("image", image);
   if (frameImage) {
     formData.append("image", frameImage);
+  }
+  for (const referenceImage of referenceImages.slice(0, 8)) {
+    formData.append("image", referenceImage);
   }
 
   const response = await requestOpenAIImageEdit(formData, openAiApiKey);

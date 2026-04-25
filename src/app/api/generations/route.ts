@@ -132,10 +132,22 @@ export async function POST(request: Request) {
   }
 
   try {
+    const referenceImages = await Promise.all(
+      styles
+        .map((style) => style.imageUrl)
+        .filter((imageUrl): imageUrl is string => Boolean(imageUrl))
+        .slice(0, 8)
+        .map((imageUrl, index) =>
+          fetchReferenceImage(imageUrl, `catalog-frame-${index}.jpg`),
+        ),
+    );
     const result = await generateTryOnImage({
       image,
       frameImage:
         frameImage instanceof File && frameImage.size > 0 ? frameImage : undefined,
+      referenceImages: referenceImages.filter(
+        (referenceImage): referenceImage is File => Boolean(referenceImage),
+      ),
       prompt,
       apiKey: usingOwnKey ? openAiApiKey : undefined,
     });
@@ -243,4 +255,23 @@ function parseBackgroundMode(value: FormDataEntryValue | null) {
 
 function parseViewMode(value: FormDataEntryValue | null) {
   return value === "three-view" ? "three-view" : "front";
+}
+
+async function fetchReferenceImage(imageUrl: string, filename: string) {
+  try {
+    const response = await fetch(imageUrl, {
+      headers: { "user-agent": "TryEyeglasses image reference fetcher" },
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const contentType = response.headers.get("content-type") ?? "image/jpeg";
+    const blob = await response.blob();
+
+    return new File([blob], filename, { type: contentType });
+  } catch {
+    return null;
+  }
 }

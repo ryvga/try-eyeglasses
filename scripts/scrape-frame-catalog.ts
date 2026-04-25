@@ -1,0 +1,194 @@
+import { writeFileSync } from "node:fs";
+
+type ShopifyProduct = {
+  title: string;
+  handle: string;
+  images?: Array<{ src?: string }>;
+  variants?: Array<{ price?: string }>;
+};
+
+type RetailerFrame = {
+  id: string;
+  brand: string;
+  name: string;
+  family: string;
+  fit: string;
+  color: string;
+  material: string;
+  approxPriceUsd: number;
+  retailer: string;
+  sourceUrl: string;
+  imageUrl: string;
+  imageAlt: string;
+  promptNotes: string;
+};
+
+const PRODUCTS_ENDPOINT = "https://www.eurooptica.com/products.json";
+const PRODUCT_BASE_URL = "https://www.eurooptica.com/products";
+const OUTPUT_FILE = "src/lib/glasses/retailer-catalog.ts";
+const MAX_PRODUCTS = 100;
+const MAX_PER_BRAND = 8;
+
+const blockedTitleWords =
+  /\b(SUN|CLIP|CASE|CHARGER|RING|NOSE|LENS|LENSES|CLEAN|CLOTH|CORD|CHAIN|ACCESSORY|PAD|SLEEVE|REPLACEMENT)\b/i;
+
+const familyCycle = [
+  "rectangle",
+  "square",
+  "round",
+  "panto",
+  "aviator",
+  "browline",
+  "cat-eye",
+];
+
+const colorWords = [
+  "black",
+  "gold",
+  "brown",
+  "blue",
+  "green",
+  "grey",
+  "gray",
+  "silver",
+  "havana",
+  "tortoise",
+  "crystal",
+  "rose",
+  "khaki",
+  "bordeaux",
+  "aubergine",
+];
+
+function normalizeAscii(value: string) {
+  return value
+    .replace(/[®™]/g, "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function slug(value: string) {
+  return normalizeAscii(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+function parseTitle(title: string) {
+  const cleanTitle = normalizeAscii(title);
+  const markIndex = title.search(/[®™]/);
+
+  if (markIndex > 0) {
+    return [
+      normalizeAscii(title.slice(0, markIndex)),
+      normalizeAscii(title.slice(markIndex + 1)),
+    ] as const;
+  }
+
+  const [brand = "", ...nameParts] = cleanTitle.split(" ");
+  return [brand, nameParts.join(" ")] as const;
+}
+
+function inferFamily(name: string, index: number) {
+  const lower = name.toLowerCase();
+  if (lower.includes("round")) return "round";
+  if (lower.includes("rectangular")) return "rectangle";
+  if (lower.includes("square")) return "square";
+  if (lower.includes("aviator")) return "aviator";
+  if (lower.includes("cat")) return "cat-eye";
+  return familyCycle[index % familyCycle.length];
+}
+
+function inferColor(imageUrl: string) {
+  const lower = imageUrl.toLowerCase();
+  return colorWords.find((color) => lower.includes(color)) ?? "mixed finish";
+}
+
+async function fetchProducts(page: number) {
+  const response = await fetch(`${PRODUCTS_ENDPOINT}?limit=250&page=${page}`, {
+    headers: { "user-agent": "TryEyeglasses catalog bot" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`EuroOptica products fetch failed: ${response.status}`);
+  }
+
+  return (await response.json()) as { products?: ShopifyProduct[] };
+}
+
+function toRetailerFrame(product: ShopifyProduct, index: number): RetailerFrame | null {
+  const imageUrl = product.images?.[0]?.src;
+  const price = Number(product.variants?.[0]?.price ?? 0);
+
+  if (!imageUrl || !price || blockedTitleWords.test(product.title)) {
+    return null;
+  }
+
+  const [brand, name] = parseTitle(product.title);
+
+  if (!brand || !name || price < 40) {
+    return null;
+  }
+
+  const family = inferFamily(name, index);
+  const color = inferColor(imageUrl);
+  const material = family === "aviator" ? "metal" : "acetate or mixed material";
+  const title = `${brand} ${name}`;
+
+  return {
+    id: `${slug(brand)}-${slug(name)}`,
+    brand,
+    name,
+    family,
+    fit: `retailer-listed ${family} fit`,
+    color,
+    material,
+    approxPriceUsd: Math.round(price),
+    retailer: "EuroOptica",
+    sourceUrl: `${PRODUCT_BASE_URL}/${product.handle}`,
+    imageUrl,
+    imageAlt: `${title} eyeglasses product image`,
+    promptNotes: `${title}, ${family} eyeglasses shown in the retailer product reference image; approximate retail price $${Math.round(price)}; ${color} ${material}; use transparent prescription lenses unless the product image clearly shows tinted lenses; realistic lens reflections, accurate bridge placement, real optical frame proportions`,
+  };
+}
+
+async function main() {
+  const frames: RetailerFrame[] = [];
+  const brandCounts = new Map<string, number>();
+
+  for (let page = 1; page <= 24 && frames.length < MAX_PRODUCTS; page += 1) {
+    const { products = [] } = await fetchProducts(page);
+    if (!products.length) break;
+
+    for (const [index, product] of products.entries()) {
+      const frame = toRetailerFrame(product, index);
+      if (!frame) continue;
+
+      const brandCount = brandCounts.get(frame.brand) ?? 0;
+      if (brandCount >= MAX_PER_BRAND) continue;
+
+      brandCounts.set(frame.brand, brandCount + 1);
+      frames.push(frame);
+
+      if (frames.length >= MAX_PRODUCTS) break;
+    }
+  }
+
+  const contents = `import type { GlassesStyle } from "@/lib/glasses/catalog";
+
+// Generated by scripts/scrape-frame-catalog.ts from EuroOptica public Shopify metadata.
+// Do not edit by hand; rerun npm run catalog:scrape when refreshing product images.
+export const RETAILER_FRAME_SEEDS: GlassesStyle[] = ${JSON.stringify(frames, null, 2)};
+`;
+
+  writeFileSync(OUTPUT_FILE, contents);
+  console.log(`Wrote ${frames.length} frames to ${OUTPUT_FILE}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

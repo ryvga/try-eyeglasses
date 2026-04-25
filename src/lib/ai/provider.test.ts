@@ -65,13 +65,16 @@ describe("generateTryOnImage", () => {
     await generateTryOnImage({
       image: new File(["source"], "source.jpg", { type: "image/jpeg" }),
       frameImage: new File(["frame"], "frame.jpg", { type: "image/jpeg" }),
+      referenceImages: [
+        new File(["catalog"], "catalog.jpg", { type: "image/jpeg" }),
+      ],
       prompt: "Add glasses",
       apiKey: "sk-user-key",
     });
 
     const request = fetchMock.mock.calls[0][1];
     expect(request.headers.Authorization).toBe("Bearer sk-user-key");
-    expect(request.body.getAll("image")).toHaveLength(2);
+    expect(request.body.getAll("image")).toHaveLength(3);
   });
 
   it("returns a user-safe error after repeated upstream failures", async () => {

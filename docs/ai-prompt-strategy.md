@@ -34,4 +34,6 @@ Multi-frame mode is intentionally still one image request. Up to eight frames ar
 
 Users can upload a frame reference image. The server sends the face photo first and the frame reference second to the image edit endpoint, so the model prioritizes preserving the person while using the second image for eyewear shape, color, and material.
 
-Do not ship scraped brand product images unless they come from a licensed product feed, official affiliate feed, explicit partner permission, or a source whose terms allow reuse. The current catalog uses brand/model names, approximate prices, and official/store search URLs as reference metadata; it does not copy product photography into the repo.
+The catalog scraper stores retailer image URLs and metadata from public Shopify product JSON. During generation, the server fetches selected catalog frame images and sends them as additional image inputs after the face photo, up to eight references per request.
+
+For long-term production, replace the seed source with an affiliate or partner feed so prices, availability, and image rights remain clean.
